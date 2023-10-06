@@ -12,5 +12,7 @@ namespace API_dot.net.Models.Dto
         public int Squares { get; set; }
         public int Сapacity { get; set; }
 
+        public string ImageUrl { get; set; }
+
     }
 }

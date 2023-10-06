@@ -4,6 +4,7 @@ using API_dot.net.Models;
 using API_dot.net.Models.Dto;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API_dot.net.Controllers
 {
@@ -12,11 +13,11 @@ namespace API_dot.net.Controllers
 
     public class LessonAPIController : ControllerBase
     {
-        private readonly ILogging logger;
+        private readonly ApplicationDbContext db;
 
-        public LessonAPIController(ILogging logger)
+        public LessonAPIController(ApplicationDbContext db)
         {
-            this.logger = logger;
+            this.db = db;
         }
 
         [HttpGet]
@@ -24,8 +25,7 @@ namespace API_dot.net.Controllers
         public ActionResult<IEnumerable<VillaDTO>> GetVillas()
         {
 
-            logger.Log("Getting all villas","");
-            return Ok(VillaStore.villaList);
+            return Ok(db.Villas.ToList());
 
         }
 
@@ -37,13 +37,13 @@ namespace API_dot.net.Controllers
         {
             if (id == 0)
             {
-                logger.Log("the id was " + id, "error");
+               
                 return BadRequest();
             }
-            var villa = VillaStore.villaList.FirstOrDefault(u => u.Id == id);
+            var villa = db.Villas.FirstOrDefault(u => u.Id == id);
             if (villa == null)
             {
-                logger.Log("No villas of id: " + id, "error");
+                
                 return NotFound();
             }
 
@@ -59,7 +59,7 @@ namespace API_dot.net.Controllers
         {
 
 
-            if (VillaStore.villaList.FirstOrDefault(u => u.Name.ToLower() == villa.Name.ToLower()) != null){
+            if (db.Villas.FirstOrDefault(u => u.Name.ToLower() == villa.Name.ToLower()) != null){
                 ModelState.AddModelError("Custom error", "Villa already exists!");
                 return BadRequest(ModelState);
 
@@ -73,10 +73,18 @@ namespace API_dot.net.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError); 
             }
 
-            villa.Id = VillaStore.villaList.OrderByDescending(u => u.Id).FirstOrDefault().Id + 1;
-            
-            VillaStore.villaList.Add(villa);
+            Villa model = new()
+            {
+                Id = villa.Id,
+                Name = villa.Name,
+                Squares = villa.Squares,
+                Сapacity = villa.Сapacity,
+                ImageUrl = villa.ImageUrl
+                
+            };
 
+            db.Villas.Add(model);
+            db.SaveChanges();
             return CreatedAtRoute("GetVilla", new { id = villa.Id }, villa);
 
         }
@@ -92,14 +100,14 @@ namespace API_dot.net.Controllers
             {
                 return BadRequest();
             }
-            var villa = VillaStore.villaList.FirstOrDefault(u=>u.Id == id);
+            var villa = db.Villas.FirstOrDefault(u=>u.Id == id);
 
             if(villa == null)
             {
                 return NotFound();
             }
-            VillaStore.villaList.Remove(villa);
-
+            db.Villas.Remove(villa);
+            db.SaveChanges();
             return NoContent();
 
         }
@@ -118,13 +126,22 @@ namespace API_dot.net.Controllers
                 return BadRequest();
             }
 
-            var villa = VillaStore.villaList.FirstOrDefault(u => u.Id == id); 
+            //var villa = db.Villas.FirstOrDefault(u => u.Id == id;
+            //villa.Name = villaDTO.Name;
+            //villa.Сapacity = villaDTO.Сapacity;
+            //villa.Squares = villaDTO.Squares;
+            Villa model = new()
+            {
+                Id = villaDTO.Id,
+                Name = villaDTO.Name,
+                Squares = villaDTO.Squares,
+                Сapacity = villaDTO.Сapacity,
+                ImageUrl = villaDTO.ImageUrl
 
-           
-            villa.Name = villaDTO.Name;
-            villa.Сapacity = villaDTO.Сapacity;
-            villa.Squares = villaDTO.Squares;
-            
+            };
+            db.Villas.Update(model);
+            db.SaveChanges(); 
+
             return NoContent();
         
 
@@ -140,15 +157,35 @@ namespace API_dot.net.Controllers
             {
                 return BadRequest();
             }
-            var villa = VillaStore.villaList.FirstOrDefault(u=>u.Id == id);
+            var villa = db.Villas.AsNoTracking().FirstOrDefault(u=>u.Id == id);
             if(villa == null)
             {
                 return NotFound();
             }
+            VillaDTO villaDto = new()
+            {
+                Id = villa.Id,
+                Name = villa.Name,
+                Squares = villa.Squares,
+                Сapacity = villa.Сapacity,
+                ImageUrl = villa.ImageUrl
 
-            patch.ApplyTo(villa);
-            
-            if(!ModelState.IsValid) 
+            };
+            patch.ApplyTo(villaDto, ModelState);
+            Villa model = new()
+            {
+                Id = villaDto.Id,
+                Name = villaDto.Name,
+                Squares = villaDto.Squares,
+                Сapacity = villaDto.Сapacity,
+                ImageUrl = villaDto.ImageUrl
+
+            };
+
+            db.Villas.Update(model);
+            db.SaveChanges();
+
+            if (!ModelState.IsValid) 
             { 
                 return BadRequest(ModelState);
             }
